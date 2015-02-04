@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.31101.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModDotaHelper", "ModDotaHelper\ModDotaHelper.csproj", "{F4E8A063-6F3B-4EB4-B3A1-670ECC50A3E7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModDotaUpdater", "ModDotaUpdater\ModDotaUpdater.csproj", "{FA38789B-8D61-4889-AAF4-93DD6AD812D2}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F4E8A063-6F3B-4EB4-B3A1-670ECC50A3E7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F4E8A063-6F3B-4EB4-B3A1-670ECC50A3E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F4E8A063-6F3B-4EB4-B3A1-670ECC50A3E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F4E8A063-6F3B-4EB4-B3A1-670ECC50A3E7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FA38789B-8D61-4889-AAF4-93DD6AD812D2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FA38789B-8D61-4889-AAF4-93DD6AD812D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FA38789B-8D61-4889-AAF4-93DD6AD812D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FA38789B-8D61-4889-AAF4-93DD6AD812D2}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
