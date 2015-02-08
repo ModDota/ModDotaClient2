@@ -7,7 +7,7 @@ using System.Windows.Forms;
 
 namespace ModDotaInstaller
 {
-    static class Program
+    static class ModDotaInstaller
     {
         /// <summary>
         /// The path to the folder containing dota.exe
