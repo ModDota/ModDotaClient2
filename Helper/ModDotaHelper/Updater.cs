@@ -13,7 +13,7 @@ namespace ModDotaHelper
     static class Updater
     {
         static private Timer UpdaterThreadTimer;
-        static private object temp;
+        static private object temp = null;
         static public void StartUpdaterThread()
         {
             UpdaterThreadTimer = new Timer(UpdaterTick,temp,3000,60000);
