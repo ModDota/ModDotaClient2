@@ -32,6 +32,16 @@ namespace ModDotaHelper
         Mutex vpkmutex = new Mutex();
 
         /// <summary>
+        /// Maximum size of an archive to make
+        /// </summary>
+        public static long maxarchivesize = 134217728; // 2^27 - valve generally doesn't go much over this.
+
+        /// <summary>
+        /// Alignment of files inside archives
+        /// </summary>
+        public static long filealignment = 1024; // 1^10 - align to kilobyte boundaries
+
+        /// <summary>
         /// Construct a VPK object with a specific filename
         /// </summary>
         /// <param name="filename">The filename (relative) where the vpk is</param>
@@ -80,7 +90,257 @@ namespace ModDotaHelper
             
             // Now that we have the basics of the file, we need to figure out how to store it
             // This involves first loading the vpk directory information
-            
+            List<VPKExt> dir = GetDirectory();
+            // Now we need to just add the file, and write new directory information
+            // Get the location to which to write the file
+            Tuple<int, uint> slot = GetNewestSpace(dir);
+            int paddinglength = (int)filealignment - (int)((int)(slot.Item2) % (int)filealignment);
+            int archivenum = slot.Item1;
+            uint offset = slot.Item2;
+            // Create a new archive file if necessary
+            if(contents.Length + slot.Item2 + paddinglength > maxarchivesize) {
+                paddinglength = 0;
+                archivenum++;
+                offset = 0;
+            }
+            // Write the file to the archive
+            using(FileStream foo = File.OpenWrite(String.Format("{0}_{1:D3}.vpk",fileprefix,archivenum)))
+            {
+                using(BinaryWriter bw = new BinaryWriter(foo))
+                {
+                    bw.Seek((int)offset,SeekOrigin.Begin);
+                    for(int i=0;i<paddinglength;i++)
+                        bw.Write((byte)0);
+                    bw.Write(contents);
+                }
+            }
+            // Add the padding to the offset so it properly reflects the file
+            offset += (uint)paddinglength;
+            // Add the file information to the directory
+            string ext = internalfilename.Substring(internalfilename.IndexOf('.')+1);
+            internalfilename = internalfilename.Substring(0,internalfilename.IndexOf('.'));
+            char[] lookfor = {'\\','/'};
+            string path = internalfilename.Substring(0,internalfilename.LastIndexOfAny(lookfor));
+            string name = internalfilename.Substring(internalfilename.LastIndexOfAny(lookfor)+1);
+            // Find where to put it
+            VPKExt writeext = null;
+            foreach(VPKExt vext in dir)
+            {
+                if (vext.ext == ext)
+                {
+                    writeext = vext;
+                }
+            }
+            if(writeext == null) {
+                writeext = new VPKExt();
+                writeext.ext = ext;
+                writeext.directories = new List<VPKDirectory>();
+                dir.Add(writeext);
+            }
+            VPKDirectory writedir = null;
+            foreach (VPKDirectory vpkd in writeext.directories)
+            {
+                if (vpkd.path == path)
+                {
+                    writedir = vpkd;
+                }
+            }
+            if (writedir == null)
+            {
+                writedir = new VPKDirectory();
+                writedir.path = path;
+                writedir.ext = ext;
+                writedir.entries = new List<VPKFileEntry>();
+                writeext.directories.Add(writedir);
+            }
+            VPKFileEntry writefile = null;
+            foreach(VPKFileEntry vpkfe in writedir.entries)
+            {
+                if (vpkfe.name == name)
+                {
+                    writefile = vpkfe;
+                    //ok, we gotta do a file replacement
+                    //thankfully, this is just overwriting a few values
+                    writefile.body.archive_index = (ushort)archivenum;
+                    writefile.body.CRC32 = BitConverter.ToUInt32(crc, 0);
+                    writefile.body.entry_length = (uint)(contents.Length);
+                    writefile.body.entry_offset = offset;
+                    writefile.body.preload_bytes = 0;
+                }
+            }
+            if (writefile == null)
+            {
+                // Didn't find a file entry, so let's add one
+                writefile = new VPKFileEntry();
+                writefile.body.archive_index = (ushort)archivenum;
+                writefile.body.CRC32 = BitConverter.ToUInt32(crc, 0);
+                writefile.body.entry_length = (uint)(contents.Length);
+                writefile.body.entry_offset = offset;
+                writefile.body.preload_bytes = 0;
+                writedir.entries.Add(writefile);
+            }
+            // Write the new directory to the directory file.
+            WriteDirectory(dir);
+        }
+        /// <summary>
+        /// Write a new _dir.vpk file, based on a vpk directory structure.
+        /// </summary>
+        /// <param name="directoryinfo">A big directory information structure as a List of VPKExts</param>
+        private void WriteDirectory(List<VPKExt> directoryinfo)
+        {
+            using(FileStream output = File.OpenWrite(fileprefix+"_dir.vpk"))
+            {
+                using(BinaryWriter bw = new BinaryWriter(output))
+                {
+                    VPKHeader headerbin = new VPKHeader(null);
+                    bw.Write(StructTools.RawSerialize(headerbin));
+                    foreach(VPKExt ext in directoryinfo) 
+                    {
+                        bw.Write(Encoding.ASCII.GetBytes(ext.ext));
+                        bw.Write((byte)0); //null terminator
+                        foreach(VPKDirectory dir in ext.directories)
+                        {
+                            bw.Write(Encoding.ASCII.GetBytes(dir.path));
+                            bw.Write((byte)0);
+                            foreach(VPKFileEntry fe in dir.entries)
+                            {
+                                bw.Write(Encoding.ASCII.GetBytes(fe.name));
+                                bw.Write(StructTools.RawSerialize(fe.body));
+                            }
+                            bw.Write((byte)0);
+                        }
+                        bw.Write((byte)0);
+                    }
+                    // Go back and fix up the length
+                    long len = bw.BaseStream.Position;
+                    bw.Seek(0, SeekOrigin.Begin);
+                    headerbin.tree_length = (uint)(len - 18);
+                    bw.Write(StructTools.RawSerialize(headerbin));
+                }
+            }
+        }
+        /// <summary>
+        /// Get the location of the end of the last file in the archive.
+        /// </summary>
+        /// <param name="directory">A vpk directory structure, as returned by GetDirectory</param>
+        /// <returns>A Tuple, containing a pair of (number of the last archive, position in the last arvhive)</returns>
+        private static Tuple<int, uint> GetNewestSpace(List<VPKExt> directory)
+        {
+            int lastarchive = -1;
+            uint lastendoffset = 0;
+            foreach(VPKExt ext in directory) {
+                foreach(VPKDirectory dir in ext.directories) {
+                    foreach(VPKFileEntry fe in dir.entries)
+                    {
+                        if (fe.body.archive_index > lastarchive)
+                        {
+                            lastarchive = fe.body.archive_index;
+                            lastendoffset = fe.body.entry_offset + fe.body.entry_length;
+                        }
+                        else if (fe.body.archive_index == lastarchive && lastendoffset < fe.body.entry_offset + fe.body.entry_length)
+                        {
+                            lastendoffset = fe.body.entry_offset + fe.body.entry_length;
+                        }
+                    }
+                }
+            }
+            return new Tuple<int, uint>(lastarchive, lastendoffset);
+        }
+        /// <summary>
+        /// Read the directory from the file.
+        /// </summary>
+        /// <returns>The VPKDirectory for the file's contents</returns>
+        private List<VPKExt> GetDirectory()
+        {
+            byte[] body = null;
+            int length = 0;
+            using(FileStream vpkfile = File.OpenRead(fileprefix+"_dir.vpk"))
+            {
+                using(BinaryReader reader = new BinaryReader(vpkfile))
+                {
+                    byte[] headerbytes = reader.ReadBytes(12);
+                    VPKHeader head = StructTools.RawDeserialize<VPKHeader>(headerbytes,0);
+                    if (head.version != 1)
+                    {
+                        return null;
+                    }
+                    body = reader.ReadBytes((int)head.tree_length);
+                    length = (int)head.tree_length;
+                }
+            }
+            if(body == null)
+            {
+                return null;
+            }
+            List<VPKExt> ret = new List<VPKExt>();
+            int index = 0;
+            int level = 0;
+            VPKExt curext = new VPKExt();
+            VPKDirectory curpath = new VPKDirectory();
+            while (index < length && level >= 0)
+            {
+                if (body[index] == '\0')
+                {
+                    switch (level)
+                    {
+                        case 0:
+                            break;
+                        case 1:
+                            ret.Add(curext);
+                            break;
+                        case 2:
+                            curext.directories.Add(curpath);
+                            break;
+                    }
+                    index++;
+                    level--;
+                    continue;
+                }
+                switch (level)
+                {
+                    case 0: //ext level
+                        int extstartindex = index;
+                        level++;
+                        while(body[index]!=0) {
+                            index++;
+                        }
+                        index++;
+                        curext = new VPKExt();
+                        curext.ext = Encoding.ASCII.GetString(body,extstartindex,index-extstartindex);
+                        curext.directories = new List<VPKDirectory>();
+                        break;
+                    case 1:
+                        int pathstartindex = index;
+                        level++;
+                        while (body[index] != 0)
+                        {
+                            index++;
+                        }
+                        index++;
+                        curpath = new VPKDirectory();
+                        curpath.path = Encoding.ASCII.GetString(body, pathstartindex, index - pathstartindex);
+                        curpath.ext = curext.ext;
+                        curpath.entries = new List<VPKFileEntry>();
+                        break;
+                    case 2:
+                        int filestartindex = index;
+                        while (body[index] != 0)
+                        {
+                            index++;
+                        }
+                        index++;
+                        VPKFileEntry vpkfile = new VPKFileEntry();
+                        vpkfile.name = Encoding.ASCII.GetString(body, filestartindex, index - filestartindex);
+                        vpkfile.path = curpath.path;
+                        vpkfile.ext = curext.ext;
+                        vpkfile.body = StructTools.RawDeserialize<VPKFile>(body, index);
+                        index += 18;
+                        index += vpkfile.body.preload_bytes; // we ignore preload data
+                        curpath.entries.Add(vpkfile);
+                        break;
+                }
+            }
+            return ret;
         }
         /// <summary>
         /// Validate the data against a reference table of filename,CRC pairs.
@@ -129,6 +389,10 @@ namespace ModDotaHelper
                 entry_length = 0;
                 terminator = (UInt16)0xffff;//terminator is alwyas same value
             }
+            public string ToString()
+            {
+                return "CRC32: " + CRC32 + "\npreload_bytes: " + preload_bytes + "\narchive_index: " + archive_index + "\nentry_offset: " + entry_offset + "\nentry_length: " + entry_length+"\n";
+            }
         }
         /// <summary>
         /// Just a VPKv1 header
@@ -156,10 +420,38 @@ namespace ModDotaHelper
                 tree_length = 0; //default value
             }
         }
+        /// <summary>
+        /// A quick and dirty in-memory representation of the content structure
+        /// </summary>
+        private class VPKExt
+        {
+            public String ext = "";
+            public List<VPKDirectory> directories = new List<VPKDirectory>();
+            public string ToString()
+            {
+                return "EXT: "+ext+"\n"+directories.ToString();
+            }
+        }
         private class VPKDirectory
         {
-            VPKDirectory[] childDirectories;
-            VPKFile[] files;
+            public String ext = "";
+            public String path = "";
+            public List<VPKFileEntry> entries;
+            public string ToString()
+            {
+                return "DIR: " + path + "\n" + entries.ToString();
+            }
+        }
+        private class VPKFileEntry
+        {
+            public String ext = "";
+            public String path = "";
+            public String name = "";
+            public VPKFile body;
+            public string ToString()
+            {
+                return "FIL: " + name + "\n" + body.ToString();
+            }
         }
         /// <summary>
         /// Used from JCH2k on stackoverflow
