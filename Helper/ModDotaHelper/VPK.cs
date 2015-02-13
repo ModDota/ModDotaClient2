@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
-using System.Threading;
 using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading;
 
 namespace ModDotaHelper
 {
@@ -60,7 +58,7 @@ namespace ModDotaHelper
             if (!File.Exists(fileprefix + "_dir.vpk"))
             {
                 //we've gotta make a new vpk from scratch
-                using(FileStream headfile = File.OpenWrite(fileprefix + "_dir.vpk"))
+                using(FileStream headfile = File.Create(fileprefix + "_dir.vpk"))
                 {
                     using(BinaryWriter writer = new BinaryWriter(headfile))
                     {
@@ -247,7 +245,8 @@ namespace ModDotaHelper
             return new Tuple<int, uint>(lastarchive, lastendoffset);
         }
         /// <summary>
-        /// Read the directory from the file.
+        /// Read the directory from the file. This is mostly ported code from my [pw]
+        /// vpk.h from vpktool.
         /// </summary>
         /// <returns>The VPKDirectory for the file's contents</returns>
         private List<VPKExt> GetDirectory()
@@ -348,9 +347,10 @@ namespace ModDotaHelper
         /// <param name="reference">A List of filename,CRC tuples.</param>
         /// <param name="calculateChecksums">Whether or not to checksum </param>
         /// <returns>Files that need to be re-acquired. Empty if checks out.</returns>
-        public List<string> Validate(List<Tuple<string,UInt32>> reference, bool calculateChecksums)
+        public List<ModResource> Validate(List<ModSpecification> reference, bool calculateChecksums)
         {
-            return new List<string>();
+            //TODO
+            return new List<ModResource>();
         }
         /// <summary>
         /// Represents a file inside a VPK
@@ -389,7 +389,7 @@ namespace ModDotaHelper
                 entry_length = 0;
                 terminator = (UInt16)0xffff;//terminator is alwyas same value
             }
-            public string ToString()
+            public override string ToString()
             {
                 return "CRC32: " + CRC32 + "\npreload_bytes: " + preload_bytes + "\narchive_index: " + archive_index + "\nentry_offset: " + entry_offset + "\nentry_length: " + entry_length+"\n";
             }
@@ -427,7 +427,7 @@ namespace ModDotaHelper
         {
             public String ext = "";
             public List<VPKDirectory> directories = new List<VPKDirectory>();
-            public string ToString()
+            public override string ToString()
             {
                 return "EXT: "+ext+"\n"+directories.ToString();
             }
@@ -437,7 +437,7 @@ namespace ModDotaHelper
             public String ext = "";
             public String path = "";
             public List<VPKFileEntry> entries;
-            public string ToString()
+            public override string ToString()
             {
                 return "DIR: " + path + "\n" + entries.ToString();
             }
@@ -448,7 +448,7 @@ namespace ModDotaHelper
             public String path = "";
             public String name = "";
             public VPKFile body;
-            public string ToString()
+            public override string ToString()
             {
                 return "FIL: " + name + "\n" + body.ToString();
             }

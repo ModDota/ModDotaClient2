@@ -63,7 +63,8 @@
     <SignManifests>false</SignManifests>
   </PropertyGroup>
   <PropertyGroup>
-    <StartupObject />
+    <StartupObject>
+    </StartupObject>
   </PropertyGroup>
   <PropertyGroup />
   <PropertyGroup>
@@ -73,12 +74,12 @@
     <TargetZone>LocalIntranet</TargetZone>
   </PropertyGroup>
   <PropertyGroup />
+  <PropertyGroup>
+    <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Crc32">
       <HintPath>..\packages\Crc32.1.0.0\lib\net45\Crc32.dll</HintPath>
-    </Reference>
-    <Reference Include="KVLib">
-      <HintPath>..\packages\KVLib.1.0.1\lib\net45\KVLib.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -93,8 +94,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="KV\KeyValue.cs" />
+    <Compile Include="KV\KVParser.cs" />
     <Compile Include="ModDotaHelper.cs" />
     <Compile Include="ModManager.cs" />
+    <Compile Include="ModResource.cs" />
+    <Compile Include="ModSpecification.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ScaleformSocketListener.cs" />
     <Compile Include="Updater.cs" />
     <Compile Include="VPK.cs" />
@@ -102,6 +108,7 @@
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
+    <None Include="Properties\app.manifest" />
   </ItemGroup>
   <ItemGroup>
     <WCFMetadata Include="Service References\" />
@@ -123,9 +130,7 @@
       <Install>false</Install>
     </BootstrapperPackage>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Properties\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

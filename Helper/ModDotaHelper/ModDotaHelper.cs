@@ -1,23 +1,24 @@
 ﻿using Microsoft.Win32;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Security.Permissions;
 using System.Threading;
+using System.Reflection;
 
 namespace ModDotaHelper
 {
     public class ModDotaHelper
     {
         /// <summary>
-        /// This MRE is set when we want to close down. The various threads then signal
-        /// that they're ready to close using the CountdownEvent workersactive.
+        /// This bool is true when we want to close down. The various threads
+        /// then signal that they're ready to closem using the CountdownEvent
+        /// workersactive so that we know when they're all done.
         /// </summary>
         public static bool closedown = false;
 
         /// <summary>
-        /// A counter for the number of workers active. Used when shutting down to ensure
-        /// that we shut down cleanly.
+        /// A counter for the number of workers active. Used when shutting it
+        /// down to ensure that we shut down cleanly.
         /// </summary>
         public static CountdownEvent workersactive = new CountdownEvent(0);
 
@@ -34,16 +35,15 @@ namespace ModDotaHelper
         public static string DotaPath = null;
 
         /// <summary>
+        /// The mod manager - pretty much the meat of the application.
+        /// </summary>
+        public static ModManager modman = null;
+
+        /// <summary>
         /// The entry point. Note that we swap over to Run so that we can get
         /// slightly higher permissions. This may not be needed.
         /// </summary>
         static void Main()
-        {
-            Run();
-        }
-
-        [PermissionSet(SecurityAction.Demand, Name = "FullTrust")]
-        public static void Run()
         {
             //get configuration data
             ReadConfig();
@@ -51,41 +51,58 @@ namespace ModDotaHelper
             InitialSetup();
             //update check
             Updater.StartUpdaterThread();
+            //Start the mod management
+            modman = new ModManager(DotaPath, DotaPath + "/moddota/pak01");
+            modman.CheckGameInfo();
+            modman.ValidateInstalledMods();
         }
-
         /// <summary>
-        /// Read the configuration file. May need to be made a bit more
-        /// fail-safe,  there's a few potential exceptions not handled.
+        /// Read the configuration file. May need to be made a bit more fail-
+        /// safe,  there's a few potential exceptions not handled.
         /// </summary>
         public static void ReadConfig()
         {
-            if(!File.Exists("config.txt"))
+            if (!File.Exists("config.txt"))
             {
                 // Uh oh! We don't have a config file!
-                // Quick, before they realize, generate a new config file
-                KVLib.KeyValue root = new KVLib.KeyValue("config");
-                KVLib.KeyValue dotadir = new KVLib.KeyValue("dotaDir");
+                // Quick, before they realize, generate a new config file!
+                KV.KeyValue root = new KV.KeyValue("config");
+                KV.KeyValue dotadir = new KV.KeyValue("dotaDir");
                 dotadir.Set(getDotaDir());
                 root.AddChild(dotadir);
                 string contents = root.ToString();
-                using(StreamWriter writeto = new StreamWriter("config.txt"))
+                using (StreamWriter writeto = new StreamWriter("config.txt"))
                 {
                     writeto.Write(contents);
                 }
                 //ok, we've writen it, it's all good
             }
-            using(StreamReader readfrom = new StreamReader("config.txt"))
+            using (StreamReader readfrom = new StreamReader("config.txt"))
             {
                 string contents = readfrom.ReadToEnd();
-                KVLib.KeyValue confignode = KVLib.KVParser.ParseKeyValueText(contents);
-                foreach (KVLib.KeyValue child in confignode.Children)
+                Console.WriteLine(contents);
+                KV.KeyValue confignode = null;
+                KV.KeyValue[] confignodes = KV.KVParser.ParseAllKeyValues(contents);
+                foreach (KV.KeyValue kv in confignodes)
                 {
-                    switch(child.Key) 
+                    if(kv.Key == "config")
+                    {
+                        confignode = kv;
+                    }
+                }
+                if (confignode == null)
+                {
+                    throw new FieldAccessException("Couldn't find config node in configuration!");
+                }
+                foreach (KV.KeyValue child in confignode.Children)
+                {
+                    switch (child.Key)
                     {
                         case "dotaDir":
                             DotaPath = child.GetString();
                             break;
                         default:
+                            // We haven't defined anything else yet.
                             continue;
                     }
                 }
@@ -106,6 +123,7 @@ namespace ModDotaHelper
         /// Get the dota install directory
         /// </summary>
         /// <returns>The dota install directory</returns>
+        [PermissionSet(SecurityAction.Demand, Name = "FullTrust")]
         public static string getDotaDir()
         {
             string dotaPath = "C:/Program Files (x86)/Steam/steamapps/common/dota 2 beta";
@@ -123,6 +141,7 @@ namespace ModDotaHelper
         /// <summary>
         /// Do operations on the first time the program is run.
         /// </summary>
+        [PermissionSet(SecurityAction.Demand, Name = "FullTrust")]
         public static void InitialSetup()
         {
             // Automatically start in the background
@@ -132,5 +151,5 @@ namespace ModDotaHelper
             }
         }
     }
-   
+
 }
