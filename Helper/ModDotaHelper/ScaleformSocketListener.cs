@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Net.Sockets;
+using System.IO;
 
 namespace ModDotaHelper
 {
@@ -22,7 +23,21 @@ namespace ModDotaHelper
         }
         private void HandleMessage(object state)
         {
-
+            using(BinaryReader reader = new BinaryReader((Stream)state))
+            {
+                UInt32 messageid = reader.ReadUInt32();
+                UInt32 length = reader.ReadUInt32();
+                switch(messageid)
+                {
+                    case 0:
+                        // "are you there" test
+                        break;
+                    default:
+                        // dunno
+                        Console.WriteLine("Uknown message recieved with id " + messageid.ToString());
+                        break;
+                }
+            }
         }
     }
 }

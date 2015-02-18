@@ -40,6 +40,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -71,7 +72,7 @@
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
   <PropertyGroup>
-    <TargetZone>LocalIntranet</TargetZone>
+    <TargetZone>Internet</TargetZone>
   </PropertyGroup>
   <PropertyGroup />
   <PropertyGroup>
@@ -96,6 +97,8 @@
   <ItemGroup>
     <Compile Include="KV\KeyValue.cs" />
     <Compile Include="KV\KVParser.cs" />
+    <Compile Include="ModDirectory.cs" />
+    <Compile Include="ModDirectoryEntry.cs" />
     <Compile Include="ModDotaHelper.cs" />
     <Compile Include="ModManager.cs" />
     <Compile Include="ModResource.cs" />

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Product Id="d2c7fddf-7565-44fd-a6b9-1e5d52625b6d" Name="ModDotaHelper" Language="1033" Version="1.0.0.0" Manufacturer="ModDota" UpgradeCode="e5349dd0-48a3-4805-b3ff-261cd9b6f7b4">
+		<Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
+
+		<MajorUpgrade DowngradeErrorMessage="A newer version of ModDotaHelper is already installed." />
+    <Media Id="1" Cabinet="Simple.cab" EmbedCab="yes" />
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFilesFolder">
+        <Directory Id="INSTALLFOLDER" Name="ModDota">
+          <Component Id="ProductComponent" Guid="71879c6a-3ec7-4486-a71e-da3b4477f115">
+            <File Id="ModDotaHelperExe" Name="$(var.ModDotaHelper.TargetFileName)" Source="$(var.ModDotaHelper.TargetPath)"/>
+            <RegistryValue Root="HKLM" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Run" Type="string" Name="ModDotaHelper" Value='"[INSTALLFOLDER]\ModDotaHelper.exe"' />
+          </Component>
+          <Component Id='ConfigGenerator' Guid='e917ee91-16cd-4fc9-8f46-d721c2aec589'>
+            <File Id='GenerateBaseConfigurationExe' Name="$(var.GenerateBaseConfiguration.TargetFileName)" Source="$(var.GenerateBaseConfiguration.TargetPath)" />
+          </Component>
+        </Directory>
+      </Directory>
+    </Directory>
+
+    <CustomAction Id='GenerateConfig' Directory='INSTALLFOLDER' ExeCommand='[INSTALLFOLDER]GenerateBaseConfig.exe' Return='asyncWait' Impersonate='no' Execute='deferred'>Failure Generating config</CustomAction>
+    <CustomAction Id='LaunchApp' Directory='INSTALLFOLDER' ExeCommand='[INSTALLFOLDER]ModDotaHelper.exe' Return='asyncNoWait'>Launch Failure</CustomAction>
+    <Feature Id="ProductFeature" Title="ModDotaInstaller" Level="1">
+			<ComponentRef Id="ProductComponent" />
+      <ComponentRef Id="ConfigGenerator" />
+		</Feature>
+
+    <InstallExecuteSequence>
+      <Custom Action="GenerateConfig" Before="InstallFinalize">Not Installed</Custom>
+      <Custom Action="LaunchApp" After="InstallFinalize">Not Installed</Custom>
+    </InstallExecuteSequence>
+	</Product>
+</Wix>

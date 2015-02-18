@@ -4,6 +4,10 @@ using System.IO;
 using System.Security.Permissions;
 using System.Threading;
 using System.Reflection;
+using System.Security.AccessControl;
+using System.Diagnostics;
+using System.ComponentModel;
+using System.Windows.Forms;
 
 namespace ModDotaHelper
 {
@@ -45,16 +49,24 @@ namespace ModDotaHelper
         /// </summary>
         static void Main()
         {
+            MessageBox.Show("Current path is " + Directory.GetCurrentDirectory());
+            MessageBox.Show("Current path is " + Assembly.GetExecutingAssembly().Location);
+            Directory.SetCurrentDirectory(System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
+            MessageBox.Show("Current path is " + Directory.GetCurrentDirectory());
+            // Set the loggging up
+            Console.SetOut(new StreamWriter(new FileStream("log.txt",FileMode.OpenOrCreate,FileAccess.Write)));
+            Console.SetError(new StreamWriter(new FileStream("error.txt", FileMode.OpenOrCreate, FileAccess.Write)));
+            Console.WriteLine("testing output");
+            Console.Out.Flush();
             //get configuration data
             ReadConfig();
-            //make sure we auto-start
-            InitialSetup();
             //update check
             Updater.StartUpdaterThread();
             //Start the mod management
             modman = new ModManager(DotaPath, DotaPath + "/moddota/pak01");
             modman.CheckGameInfo();
             modman.ValidateInstalledMods();
+            while (true) ;
         }
         /// <summary>
         /// Read the configuration file. May need to be made a bit more fail-
@@ -62,37 +74,65 @@ namespace ModDotaHelper
         /// </summary>
         public static void ReadConfig()
         {
-            if (!File.Exists("config.txt"))
+            string configpath = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData) + "/config.txt";
+            if (!File.Exists(configpath))
             {
                 // Uh oh! We don't have a config file!
                 // Quick, before they realize, generate a new config file!
-                KV.KeyValue root = new KV.KeyValue("config");
-                KV.KeyValue dotadir = new KV.KeyValue("dotaDir");
-                dotadir.Set(getDotaDir());
-                root.AddChild(dotadir);
-                string contents = root.ToString();
-                using (StreamWriter writeto = new StreamWriter("config.txt"))
+                // By doing this approach, we can get the elevated privs needed to peek at the registry for dota' location.
+                ProcessStartInfo ps = new ProcessStartInfo();
+                ps.Verb = "runas";
+                ps.FileName = "GenerateBaseConfiguration.exe";
+                try
                 {
-                    writeto.Write(contents);
+                    Process generator = Process.Start(ps);
+                    generator.WaitForExit();
+                }
+                catch (Win32Exception)
+                {
+                    //can't really do anything about it here
                 }
                 //ok, we've writen it, it's all good
             }
-            using (StreamReader readfrom = new StreamReader("config.txt"))
+            // The file may still not exist if the generator failed
+            if (File.Exists(configpath))
             {
-                string contents = readfrom.ReadToEnd();
-                Console.WriteLine(contents);
+                string contents;
+                try
+                {
+                    using (StreamReader readfrom = new StreamReader(configpath))
+                    {
+                        contents = readfrom.ReadToEnd();
+                    }
+                }
+                catch (Exception)
+                {
+                    // There's a lot of reasons why it might fail, so just handle it with defaults for now
+                    Console.WriteLine("Failed to read config file, using default values...");
+                    goto parsefailed;
+                }
                 KV.KeyValue confignode = null;
-                KV.KeyValue[] confignodes = KV.KVParser.ParseAllKeyValues(contents);
+                KV.KeyValue[] confignodes;
+                try
+                {
+                    confignodes = KV.KVParser.ParseAllKeyValues(contents);
+                }
+                catch (KV.KVParser.KeyValueParsingException)
+                {
+                    Console.WriteLine("Failed to parse config file, using default values...");
+                    goto parsefailed;
+                }
                 foreach (KV.KeyValue kv in confignodes)
                 {
-                    if(kv.Key == "config")
+                    if (kv.Key == "config")
                     {
                         confignode = kv;
                     }
                 }
                 if (confignode == null)
                 {
-                    throw new FieldAccessException("Couldn't find config node in configuration!");
+                    Console.WriteLine("Couldn't find config node in configuration, using default values...");
+                    goto parsefailed;
                 }
                 foreach (KV.KeyValue child in confignode.Children)
                 {
@@ -106,50 +146,24 @@ namespace ModDotaHelper
                             continue;
                     }
                 }
+                // Check that required values are set
+                if (DotaPath == null)
+                {
+                    Console.WriteLine("Couldn't find required values in config file, using default values...");
+                    goto parsefailed;
+                }
             }
-        }
-
-        /// <summary>
-        /// The x64 registry entry for the dota install location.
-        /// </summary>
-        const string DotaRegPath64 = @"HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 570";
-
-        /// <summary>
-        /// The x86 registry entry for the dota install location.
-        /// </summary>
-        const string DotaRegPath86 = @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 570";
-
-        /// <summary>
-        /// Get the dota install directory
-        /// </summary>
-        /// <returns>The dota install directory</returns>
-        [PermissionSet(SecurityAction.Demand, Name = "FullTrust")]
-        public static string getDotaDir()
-        {
-            string dotaPath = "C:/Program Files (x86)/Steam/steamapps/common/dota 2 beta";
-
-            //Thanks to Jexah for the better path detection
-            var registryPath = Registry.GetValue(Environment.Is64BitOperatingSystem ? DotaRegPath64 : DotaRegPath86, "InstallLocation", dotaPath);
-
-            if (registryPath != null && registryPath.ToString() != String.Empty)
+            else
             {
-                dotaPath = registryPath.ToString();
+                goto parsefailed;
             }
-            return dotaPath;
-        }
-
-        /// <summary>
-        /// Do operations on the first time the program is run.
-        /// </summary>
-        [PermissionSet(SecurityAction.Demand, Name = "FullTrust")]
-        public static void InitialSetup()
-        {
-            // Automatically start in the background
-            using (RegistryKey key = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true))
-            {
-                key.SetValue("ModDotaHelper", "\"" + System.Reflection.Assembly.GetExecutingAssembly().Location + "\"");
-            }
+            return;
+        // PARSE FAILURE HANDLING
+        parsefailed:
+            // can't read the configuration, and can't generate a new one. Oh well, use defaults.
+            // Default dota install dir
+            DotaPath = "C:/Program Files (x86)/Steam/steamapps/common/dota 2 beta";
+            return;
         }
     }
-
 }

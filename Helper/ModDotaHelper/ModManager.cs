@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 
 namespace ModDotaHelper
 {
@@ -185,12 +186,19 @@ namespace ModDotaHelper
             {
                 Console.WriteLine(modfilename);
                 KV.KeyValue thisone = null;
-                using (FileStream fs = File.OpenRead(modfilename))
+                try
                 {
-                    using (StreamReader sr = new StreamReader(fs))
+                    using (FileStream fs = File.OpenRead(modfilename))
                     {
-                        thisone = KV.KVParser.ParseKeyValue(sr.ReadToEnd());
+                        using (StreamReader sr = new StreamReader(fs))
+                        {
+                            thisone = KV.KVParser.ParseKeyValue(sr.ReadToEnd());
+                        }
                     }
+                } catch (KV.KVParser.KeyValueParsingException)
+                {
+                    Console.WriteLine("Error while KV parsing " + modfilename);
+                    thisone = null;
                 }
                 if(thisone == null)
                 {
@@ -199,7 +207,7 @@ namespace ModDotaHelper
                 }
                 ModSpecification ms = new ModSpecification();
                 ms.name = thisone.Key;
-                ms.version = new Version(-1,-1);
+                ms.version = new Version();
                 ms.files = new List<ModResource>();
                 foreach(KV.KeyValue k in thisone.Children)
                 {
@@ -209,23 +217,7 @@ namespace ModDotaHelper
                     }
                     if(k.Key == "resource")
                     {
-                        ModResource mr = new ModResource();
-                        foreach(KV.KeyValue v in k.Children)
-                        {
-                            switch (k.Key)
-                            {
-                                case "CRC":
-                                    mr.CRC = UInt32.Parse(k.GetString());
-                                    break;
-                                case "internalpath":
-                                    mr.internalpath = k.GetString();
-                                    break;
-                                case "downloadurl":
-                                    mr.downloadurl = k.GetString();
-                                    break;
-                            }
-                        }
-                        ms.files.Add(mr);
+                        ms.files.Add(new ModResource(k));
                     }
                 }
             }
@@ -234,9 +226,71 @@ namespace ModDotaHelper
         /// <summary>
         /// Get the mod list from the local cache.
         /// </summary>
-        public void GetModList()
+        /// <param name="forcereacquire">If true, force a new download of the directory.</param>
+        public ModDirectory GetModDirectory(bool forcereacquire = false)
         {
-
+            if(forcereacquire || !File.Exists(dotapath+"/moddota/directory.kv"))
+            {
+                // If we don't have it, we need it
+                // also handle cases where we want to force a new download
+                using (WebClient client = new WebClient())
+                {
+                    client.DownloadFile("https://moddota.com/mdc/directory.kv", dotapath + "/moddota/directory.kv");
+                }
+                return ReadLocalModDirectory();
+            }
+            else
+            {
+                // We have some version installed - check it against the remote version
+                Version remoteversion = new Version();
+                using (WebClient client = new WebClient())
+                {
+                    remoteversion = new Version(client.DownloadString("https://moddota.com/mdc/directory.version"));
+                }
+                ModDirectory dir = ReadLocalModDirectory();
+                if (dir.version < remoteversion)
+                {
+                    // we're out of date, get the new version
+                    using (WebClient client = new WebClient())
+                    {
+                        client.DownloadFile("https://moddota.com/mdc/directory.kv", dotapath + "/moddota/directory.kv");
+                    }
+                    return ReadLocalModDirectory();
+                }
+                else
+                {
+                    // we're up-to-date, return the local version
+                    return dir;
+                }
+            }
+        }
+        private ModDirectory ReadLocalModDirectory()
+        {
+            if (!File.Exists(dotapath + "/moddota/directory.kv"))
+            {
+                return null;
+            }
+            string contents = null;
+            using(FileStream fs = File.OpenRead(dotapath + "/moddota/directory.kv"))
+            {
+                using(StreamReader sr = new StreamReader(fs))
+                {
+                    contents = sr.ReadToEnd();
+                }
+            }
+            if (contents == null)
+            {
+                return null;
+            }
+            try
+            {
+                KV.KeyValue kv = KV.KVParser.ParseKeyValue(contents);
+                return new ModDirectory(kv);
+            } catch (KV.KVParser.KeyValueParsingException)
+            {
+                Console.WriteLine("poorly formatted kv file");
+                return null;
+            }
         }
     }
 }

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace ModDotaHelper
 {
     /// <summary>
-    /// The specification for an individual mod.
+    /// The specification for an individual mod, as put in a .mod file.
     /// </summary>
     public class ModSpecification
     {

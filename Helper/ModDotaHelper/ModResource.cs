@@ -23,5 +23,27 @@ namespace ModDotaHelper
         /// The url at which the file can be acquired.
         /// </summary>
         public string downloadurl;
+        /// <summary>
+        /// Construct from a kv node, used when parsing .mod files.
+        /// </summary>
+        /// <param name="k"></param>
+        public ModResource(KV.KeyValue k)
+        {
+            foreach (KV.KeyValue v in k.Children)
+            {
+                switch (v.Key)
+                {
+                    case "CRC":
+                        CRC = UInt32.Parse(v.GetString());
+                        break;
+                    case "internalpath":
+                        internalpath = v.GetString();
+                        break;
+                    case "downloadurl":
+                        downloadurl = v.GetString();
+                        break;
+                }
+            }
+        }
     }
 }

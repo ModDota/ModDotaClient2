@@ -53,7 +53,7 @@ namespace ModDotaUpdater
                 }
             } catch (Exception)
             {
-                return new Version(-1, -1, -1, -1);
+                return new Version();
             }
         }
         /// <summary>
@@ -68,7 +68,7 @@ namespace ModDotaUpdater
             } catch (Exception)
             {
                 // can't open it, so force update
-                return new Version(-1, -1, -1, -1);
+                return new Version();
             }
         }
     }
