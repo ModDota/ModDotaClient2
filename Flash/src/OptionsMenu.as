@@ -33,7 +33,7 @@
 			trace("Created MainBG");
 			var mods:Array = new Array();
 			var i:int = 0;
-			for(i=0; i < 10; i++) {
+			for(i=1; i <= 17; i++) {
 				trace("Creating mod "+i);
 				var mod:ModRow = new ModRow(width, height, i);
 				trace("a" + i);
