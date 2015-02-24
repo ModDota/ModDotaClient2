@@ -20,17 +20,11 @@
 		public var dropdownDataProvider:IDataProvider;
 		
 		public function ModRow(mainWidth:int, mainHeight:int, i:int) {
-			trace("MODROW_a");
 			var oldwidth = MainText.width;
-			trace("MODROW_b");
 			s_row_container = AssetUtils.ReplaceAsset(s_row_container, "s_row_container");
-			trace("MODROW_c");
 			width = 21 * s_row_container.width / 32;
-			trace("MODROW_d");
 			fancyButton = AssetUtils.ReplaceAsset(fancyButton, "chrome_arrow_button_right");
-			trace("MODROW_e");
 			fancyButton.addEventListener(ButtonEvent.CLICK, fancyButtonClicked);
-			trace("MODROW_f");
 			
 			var menuItems:Array = [];
 			menuItems.push({
@@ -42,7 +36,7 @@
                "option":2
             });
 			dropdownDataProvider = new DataProvider(menuItems);
-			
+			//TODO: actually have this work
 			dropdownMC = AssetUtils.CreateAsset("ScrollingListSkinned");
 			dropdownMC.dataProvider = dropdownDataProvider;
 			dropdownMC.addEventListener(ListEvent.ITEM_PRESS, dropdownClicked);
