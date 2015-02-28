@@ -27,6 +27,7 @@
 			modBG.height = 7*(height / 50);
 			modBG.width = 4*(width / 50);
 			modBG.visible = true;
+			modBG.gotoAndStop(1);
 			trace("Created modBG");
 			mainBG = AssetUtils.CreateAsset("newlayout_inset");
 			addChild(mainBG);
@@ -35,6 +36,7 @@
 			mainBG.height = 7*(height / 50);
 			mainBG.width = 7.5*(width / 50);
 			mainBG.visible = true;
+			mainBG.gotoAndStop(1);
 			trace("Created MainBG");
 			mods = new Array();
 			var i:int = 0;
@@ -42,10 +44,10 @@
 				trace("Creating mod "+i);
 				var mod:ModRow = new ModRow(width, height, i);
 				addChild(mod);
-				mod.x = 0;
-				mod.y = i*(6*height/125);
-				mod.height = 6*height/125;
-				mod.width = width/4;
+				mod.x = width / 250;
+				mod.y = (i+0.5)*(6*height/125);
+				mod.height = 5*height/125;
+				mod.width = 3*width/13;
 				mod.visible = true;
 				mods.push(mod);
 			}

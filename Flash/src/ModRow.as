@@ -23,6 +23,7 @@
 			var oldwidth = MainText.width;
 			s_row_container = AssetUtils.ReplaceAsset(s_row_container, "s_row_container");
 			width = 21 * s_row_container.width / 32;
+			height = 2 * s_row_container.height / 4;
 			fancyButton = AssetUtils.ReplaceAsset(fancyButton, "chrome_arrow_button_right");
 			fancyButton.addEventListener(ButtonEvent.CLICK, fancyButtonClicked);
 			
