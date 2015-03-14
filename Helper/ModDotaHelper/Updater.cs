@@ -61,7 +61,7 @@ namespace ModDotaHelper
                     }
                     //This is really just a matter of killing our current process, and starting up the updater
                     //in theory, the updater will then update the helper, and start it up again
-                    ModDotaHelper.closedown = true;
+                    ModDotaHelper.closedown.Set();
                     // Wait for all workers to stop
                     ModDotaHelper.workersactive.Wait();
                     // Start the updater (it'll wait a few seconds after starting)

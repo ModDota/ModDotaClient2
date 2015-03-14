@@ -24,6 +24,10 @@ namespace ModDotaHelper
         /// </summary>
         public string downloadurl;
         /// <summary>
+        /// The cryptographic signature of the file (base64-encoded)
+        /// </summary>
+        public string signature;
+        /// <summary>
         /// Construct from a kv node, used when parsing .mod files.
         /// </summary>
         /// <param name="k"></param>
@@ -41,6 +45,9 @@ namespace ModDotaHelper
                         break;
                     case "downloadurl":
                         downloadurl = v.GetString();
+                        break;
+                    case "signature":
+                        signature = v.GetString();
                         break;
                 }
             }

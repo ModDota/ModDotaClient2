@@ -25,6 +25,10 @@ namespace ModDotaHelper.KV
         /// <exception cref="ModDotaHelper.KV.KVParser.KeyValueParsingException">Throws one of these if parsing fails</exception>
         public static KeyValue[] ParseAllKeyValues(string contents, bool allowunnamedkeys = false)
         {
+            if(contents == null)
+            {
+                throw new KeyValueParsingException("Contents string was null!", new ArgumentNullException());
+            }
             try
             {
                 parseEnum parseState = parseEnum.lookingForKey;

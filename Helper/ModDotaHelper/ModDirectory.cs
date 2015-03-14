@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -17,12 +19,25 @@ namespace ModDotaHelper
         /// </summary>
         public List<ModDirectoryEntry> entries = new List<ModDirectoryEntry>();
         /// <summary>
+        /// Construct an empty ModDirectory.
+        /// </summary>
+        public ModDirectory()
+        {
+        }
+        /// <summary>
         /// Construct a ModDirectory from the stored KV info
         /// </summary>
-        /// <param name="des">The keyvalue object describing the ModDirectory.</param>
-        public ModDirectory(KV.KeyValue des)
+        /// <param name="des">The KV object containing the keyvalue structure as well as the signature for the moddirectory.</param>
+        /// <param name="host">The host from which the ModDirectory was fetched, used for validation.</param>
+        /// <exception cref="ModDotaHelper.ModDirectory.ModDirectorySignatureException">If the directory's signature is bad.</exception>
+        public ModDirectory(KV.KeyValue des, string host)
         {
-            foreach(KV.KeyValue kv in des.Children)
+            bool passedvalidation = ModDotaHelper.modman.CCV.CheckSignature(des);
+            if (!passedvalidation)
+            {
+                throw new CryptoChainValidator.SignatureException();
+            }
+            foreach(KV.KeyValue kv in des["body"].Children)
             {
                 switch(kv.Key)
                 {
@@ -34,6 +49,14 @@ namespace ModDotaHelper
                         break;
                 }
             }
+        }
+        /// <summary>
+        /// Add all of the entries from the other ModDirectory to this one.
+        /// </summary>
+        /// <param name="other">The other ModDirectory.</param>
+        public void add(ModDirectory other)
+        {
+            entries.AddRange(other.entries);
         }
     }
 }

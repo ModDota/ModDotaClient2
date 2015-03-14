@@ -36,7 +36,8 @@ namespace ModDotaHelper
         /// </summary>
         public bool core = false;
         /// <summary>
-        /// Construct a ModDirectoryEntry from the stored KV info
+        /// Construct a ModDirectoryEntry from the stored KV info.
+        /// Thankfully, this one at least doesn't need crypto signing...I think
         /// </summary>
         /// <param name="des">The keyvalue object describing the ModDirectoryEntry.</param>
         public ModDirectoryEntry(KV.KeyValue des)

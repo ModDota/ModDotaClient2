@@ -18,7 +18,7 @@ namespace ModDotaHelper
         /// then signal that they're ready to closem using the CountdownEvent
         /// workersactive so that we know when they're all done.
         /// </summary>
-        public static bool closedown = false;
+        public static ManualResetEvent closedown = new ManualResetEvent(false);
 
         /// <summary>
         /// A counter for the number of workers active. Used when shutting it
@@ -60,13 +60,19 @@ namespace ModDotaHelper
             Console.Out.Flush();
             //get configuration data
             ReadConfig();
-            //update check
-            Updater.StartUpdaterThread();
             //Start the mod management
             modman = new ModManager(DotaPath, DotaPath + "/moddota/pak01");
             modman.CheckGameInfo();
             modman.ValidateInstalledMods();
-            while (true) ;
+
+            //update check
+            Updater.StartUpdaterThread();
+            
+            // Listen to Dota
+            ScaleformSocketListener sskl = new ScaleformSocketListener();
+
+            // While there's workers active, don't close
+            workersactive.Wait();
         }
         /// <summary>
         /// Read the configuration file. May need to be made a bit more fail-

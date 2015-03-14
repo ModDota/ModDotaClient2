@@ -95,10 +95,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CryptoChainValidator.cs" />
     <Compile Include="KV\KeyValue.cs" />
     <Compile Include="KV\KVParser.cs" />
     <Compile Include="ModDirectory.cs" />
     <Compile Include="ModDirectoryEntry.cs" />
+    <Compile Include="ModDirectoryList.cs" />
     <Compile Include="ModDotaHelper.cs" />
     <Compile Include="ModManager.cs" />
     <Compile Include="ModResource.cs" />
@@ -111,7 +113,9 @@
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
-    <None Include="Properties\app.manifest" />
+    <None Include="Properties\app.manifest">
+      <SubType>Designer</SubType>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <WCFMetadata Include="Service References\" />
