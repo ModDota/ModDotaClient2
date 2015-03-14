@@ -1,0 +1,3 @@
+[submodule "Flash/ModDotaLib"]
+	path = Flash/ModDotaLib
+	url = https://github.com/ModDota/ModDotaLib
